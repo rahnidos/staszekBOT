@@ -1,13 +1,13 @@
 from singleton import Singleton
 #from staszek imort staszek
 import sqlite3
-
+import os
 @Singleton
 class dbConnector(object):
 
     def __init__(self):
-        self.__conn = sqlite3.connect('../test_env/staszek/staszek.db')
-        #@# TODO: sparametryzować gdzie jest baza
+        hpath=os.environ.get('STASZEKHOME')
+        self.__conn = sqlite3.connect(hpath+'staszek.db',check_same_thread=False)
         pass
 
     def __str__(self):
@@ -21,7 +21,7 @@ class dbConnector(object):
         if r: return r[0]
         else: return False
 
-    def select_dict(self, q):
+    def select_list(self, q):
         cur = self.__conn.cursor()
         cur.execute(q)
         r = cur.fetchall()
@@ -54,10 +54,21 @@ class dbConnector(object):
         return self.execute(q)
 
     def getCommand(self, alias):
-        q = "slelect value from commands where alias='%s'" % (alias)
+        q = "select value from commands where alias='%s'" % (alias)
         ret = self.select_single(q)
         return ret
     def getCommands(self):
-        q = "select alias, real, type from commands"
-        ret = self.select_dict(q)
+        q = "select alias, real, type from commands order by type"
+        ret = self.select_list(q)
+        return ret
+    def getRandomAnswer(self):
+        q = "select answer from answers where question='%s' ORDER BY RANDOM() LIMIT 1;" % (q)
+        ret = self.select_single(q)
+        return ret
+    def getRolls(self):
+        q = "select thing, func from rolls"
+        list = self.select_list(q)
+        ret={}
+        for row in list:
+            ret[row[0]]=row[1]
         return ret
