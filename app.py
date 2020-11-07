@@ -1,6 +1,8 @@
 from dbConnector import dbConnector
 from telegram.ext import CommandHandler
+from telegram.ext import MessageHandler
 from telegram.ext import Updater
+from telegram.ext import Filters
 #from staszek import staszek
 import logging
 import sys
@@ -15,7 +17,7 @@ hpath=os.environ.get('STASZEKHOME')
 lastseed=time()
 chpiclimit=0
 db = dbConnector.Instance()
-
+mana = {}
 
 def findUserName(update, context):
     tusername=update.message.from_user.first_name
@@ -29,9 +31,8 @@ def answerTxt(update, context, ans):
 def answerPicFromPath(update, context, path, caption):
     capt='@'+findUserName(update, context)+': '+caption
     context.bot.send_photo(chat_id=update.message.chat.id, photo=open(path, 'rb'), caption=capt)
-def answerPicRaw(bot, update, img, caption):
-    capt='@'+findUserName(update, context)+': '+caption
-    context.bot.send_photo(chat_id=update.message.chat.id, photo=img, caption=capt)
+def sendSticker(update,context,sid):
+    context.bot.send_sticker(chat_id=update.message.chat_id, sticker=sid)
 
 #usefull functions
 def listImgR(p):
@@ -84,25 +85,35 @@ def roll(update, context):
         else: answerTxt(update,context,'Whaaat?')
     else: answerTxt(update, context, 'stało się coś bardzo złego!')
 
-
+def rollSticker(update,context,tag):
+    sid=db.getRandomSticker(tag)
+    sendSticker(update,context,sid)
 def rollPic(update, context):
     path='resources/test.png'
     answerPicFromPath(update,context,path,'test')
+
 def rollChannelPic(update, context):
+    global mana
     path='resources/test.png'
-    chdir=update.message.chat.id
-    if(chdir>0):
+    chid=update.message.chat.id
+    if(chid>0):
         answerTxt(update,context,'Yeah... nice try')
         return True
-    chdir=hpath+str(chdir)
+    chdir=hpath+str(chid)
     if(not os.path.isdir(chdir)):
         answerTxt(update,context,'Yeah... nice try')
         return True
     udir=chdir+'/'+str(update.message.from_user.id)
     if(os.path.isdir(udir)):
-        answerPicFromPath(update,context,randomPicFromPath(udir),'mana')
+        answerPicFromPath(update,context,randomPicFromPath(udir),'no mana needed')
     else:
-        answerPicFromPath(update,context,randomPicFromPath(chdir),'mana')
+        if not chid in mana: mana[chid]=0
+        if (mana[chid]<time()):
+            m=randint(1,3600)
+            mana[chid]=time()+m
+            answerPicFromPath(update,context,randomPicFromPath(chdir),'Countdown:'+str(m))
+        else:
+            answerTxt(update,context,'Nie mam wystarczająco many')
     return True
 
 def question(update, context):
@@ -124,13 +135,16 @@ def main():
     def restart(update, context):
             update.message.reply_text('Bot is restarting...')
             Thread(target=stop_and_restart).start()
-
+    def printUpdate(update, context):
+        print(str(update))
     btoken=db.getParam('token')
     if btoken==False:
         logging.error('No token! Are you configured this app correctly?')
         sys.exit(1)
     updater = Updater(token=btoken, use_context=True)
     dispatcher = updater.dispatcher
+
+
 
     comlist=db.getCommands()
     for com in comlist:
@@ -146,8 +160,10 @@ def main():
             dispatcher.add_handler(CommandHandler(com[0], eval(com[0])))
 
     dispatcher.add_handler(CommandHandler('r', restart)) #@#TODO filtr na usera
-
+    dispatcher.add_handler(CommandHandler('u', printUpdate))
+    dispatcher.add_handler(MessageHandler(Filters.sticker,printUpdate))
     updater.start_polling()
     updater.idle()
+
 if __name__ == '__main__':
 	main()

@@ -61,8 +61,8 @@ class dbConnector(object):
         q = "select alias, real, type from commands order by type"
         ret = self.select_list(q)
         return ret
-    def getRandomAnswer(self):
-        q = "select answer from answers where question='%s' ORDER BY RANDOM() LIMIT 1;" % (q)
+    def getRandomAnswer(self,quest):
+        q = "select answer from answers where question='%s' ORDER BY RANDOM() LIMIT 1;" % (quest)
         ret = self.select_single(q)
         return ret
     def getRolls(self):
@@ -71,4 +71,8 @@ class dbConnector(object):
         ret={}
         for row in list:
             ret[row[0]]=row[1]
+        return ret
+    def getRandomSticker(self,tag):
+        q = "select fileid from stickers where tag LIKE '%s' ORDER BY RANDOM() LIMIT 1;" % ('%'+tag+'%')
+        ret=self.select_single(q)
         return ret
