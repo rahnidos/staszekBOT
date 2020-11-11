@@ -3,6 +3,7 @@ from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler
 from telegram.ext import Updater
 from telegram.ext import Filters
+from pyparsing import *
 #from staszek import staszek
 import logging
 import sys
@@ -16,6 +17,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 hpath=os.environ.get('STASZEKHOME')
 lastseed=time()
 chpiclimit=0
+dices = Optional(Word(nums), default='1')+oneOf('k K d D')+Word(nums)+Optional(oneOf('- + * /')+Word(nums))
 db = dbConnector.Instance()
 mana = {}
 
@@ -71,19 +73,63 @@ def randomPicFromPath(d):
     img=choice(listImg(d))
     return img
 
+def rollDice(itype,reroll):
+    tmp_ret=[]
+    roll=randint(1,itype)
+    tmp_ret.append(roll)
+    if (reroll==1 and roll==itype):
+        tmp_ret.extend(rollDice(itype,1))
+    return tmp_ret
+
+def rollDices(d):
+    try:
+        mod=d[3]+d[4]
+    except IndexError:
+        mod=''
+    if int(d[0])>100: d[0]='100'
+    if int(d[2])>1024: d[2]='1024'
+    if d[1]=='D' or d[1]=='K':
+        reroll=1
+        if int(d[2])==1: reroll=0
+    else: reroll=0
+    dtab=[]
+    for each in range(int(d[0])):
+        dtab.extend(rollDice(int(d[2]),reroll))
+    dtab.sort()
+    rresult='('
+    for el in dtab:
+        rresult+=str(el)+'+'
+    rresult=rresult[:-1]+')'+mod
+    sum=eval(rresult)
+    rresult=rresult+'='+str(sum)
+    return rresult
+
+
 def start(update, context):
     answerTxt(update, context, 'Jestem Bot. Staszek Bot.')
     #@#TODO Komunikat startowy niech bierze też z bazy jako parametr
 # main commands
 def roll(update, context):
+    try:
+        s=context.args[0]
+    except IndexError:
+        answerTxt(update, context, '?') #@#TODO tekst z bazy tekstów
+        return True
+    d=None
+    for result in dices.scanString(s):
+        d=result[0]
     rolldict=db.getRolls();
-    if rolldict:
-        if context.args[0] in rolldict.keys():
-            func=rolldict[context.args[0]]
-            context.args=context.args[1:]
-            eval(func)
-        else: answerTxt(update,context,'Whaaat?')
-    else: answerTxt(update, context, 'stało się coś bardzo złego!')
+    if (not rolldict):
+        answerTxt(update, context, 'stało się coś bardzo złego!')
+        return True
+    if (d):
+        answerTxt(update,context,rollDices(d))
+    elif s in rolldict.keys():
+        func=rolldict[s]
+        context.args=context.args[1:]
+        eval(func)
+    else: answerTxt(update,context,'Whaaat?')
+
 
 def rollSticker(update,context,tag):
     sid=db.getRandomSticker(tag)
@@ -139,7 +185,7 @@ def main():
         print(str(update))
     btoken=db.getParam('token')
     if btoken==False:
-        logging.error('No token! Are you configured this app correctly?')
+        logging.error('No token! Did you configured this app correctly?')
         sys.exit(1)
     updater = Updater(token=btoken, use_context=True)
     dispatcher = updater.dispatcher
