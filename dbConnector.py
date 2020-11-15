@@ -76,3 +76,7 @@ class dbConnector(object):
         q = "select fileid from stickers where tag LIKE '%s' ORDER BY RANDOM() LIMIT 1;" % ('%'+tag+'%')
         ret=self.select_single(q)
         return ret
+    def insertChannel(self, chid, chname):
+        q = "insert into channel (id, name) values('%s','%s')" % (chid, chname)
+        ret= self.execute(q)
+        return ret

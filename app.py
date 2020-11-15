@@ -72,7 +72,6 @@ def randomPicFromPath(d):
     rseed()
     img=choice(listImg(d))
     return img
-
 def rollDice(itype,reroll):
     tmp_ret=[]
     roll=randint(1,itype)
@@ -80,6 +79,9 @@ def rollDice(itype,reroll):
     if (reroll==1 and roll==itype):
         tmp_ret.extend(rollDice(itype,1))
     return tmp_ret
+
+
+
 
 def rollDices(d):
     try:
@@ -129,8 +131,9 @@ def roll(update, context):
         context.args=context.args[1:]
         eval(func)
     else: answerTxt(update,context,'Whaaat?')
-
-
+def randMember(update, context):
+    list='dupa'
+    answerTxt(update,context,list)
 def rollSticker(update,context,tag):
     sid=db.getRandomSticker(tag)
     sendSticker(update,context,sid)
@@ -172,6 +175,26 @@ def question(update, context):
     if not a: a='nie wiem :(' #@#TODO tekst z bazy
     answerTxt(update, context, a)
 
+#ADM Functions
+def printUpdate(update, context):
+    print(str(update))
+
+def addChannel(update, context):
+    chname=update.message.chat['title']
+    chid=update.message.chat['id']
+    ret='OK'
+    if(not db.insertChannel(chid, chname)):
+        ret='Operation failed'
+    else:
+        chdir=hpath+str(chid)
+        if(not os.path.isdir(chdir)):
+            try:
+                os.mkdir(chdir)
+            except OSError:
+                ret='Cannot create directory for photos'
+    answerTxt(update, context, ret)
+
+
 def main():
     def stop_and_restart():
             updater.stop()
@@ -181,9 +204,14 @@ def main():
     def restart(update, context):
             update.message.reply_text('Bot is restarting...')
             Thread(target=stop_and_restart).start()
-    def printUpdate(update, context):
-        print(str(update))
+
+#BOT Creation
     btoken=db.getParam('token')
+    try:
+        bowner=int(db.getParam('owner'))
+    except ValueError:
+        bowner=1
+
     if btoken==False:
         logging.error('No token! Did you configured this app correctly?')
         sys.exit(1)
@@ -205,9 +233,10 @@ def main():
             exec(strf)
             dispatcher.add_handler(CommandHandler(com[0], eval(com[0])))
 
-    dispatcher.add_handler(CommandHandler('r', restart)) #@#TODO filtr na usera
-    dispatcher.add_handler(CommandHandler('u', printUpdate))
-    dispatcher.add_handler(MessageHandler(Filters.sticker,printUpdate))
+    dispatcher.add_handler(CommandHandler('r', restart, Filters.user(user_id=bowner))) #@#TODO filtr na usera
+    dispatcher.add_handler(CommandHandler('u', printUpdate, Filters.user(user_id=bowner)))
+    dispatcher.add_handler(CommandHandler('addchannel', addChannel, Filters.user(user_id=bowner)))
+    #dispatcher.add_handler(MessageHandler(Filters.sticker,printUpdate))
     updater.start_polling()
     updater.idle()
 
