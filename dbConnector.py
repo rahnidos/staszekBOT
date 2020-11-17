@@ -80,3 +80,15 @@ class dbConnector(object):
         q = "insert into channel (id, name) values('%s','%s')" % (chid, chname)
         ret= self.execute(q)
         return ret
+    def insertFriend(self, user, chid):
+        q = "insert into friends (user, chid) values (%d,'%s') on conflict(user,chid) do nothing" % (user,chid)
+        ret=self.execute(q)
+        return ret
+    def getRandomFriend(self, chid):
+        q = "select user from friends where chid='%s' order by random() limit 1;" % (chid)
+        ret=self.select_single(q)
+        return ret
+    def removeFriend(self, user, chid):
+        q = "delete from friends where chid='%s' and user =%d" % (str(chid), user)
+        ret=self.execute(q)
+        return ret

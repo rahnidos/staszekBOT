@@ -1,1 +1,0 @@
-class staszek(object):

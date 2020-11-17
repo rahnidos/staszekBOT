@@ -21,11 +21,7 @@ dices = Optional(Word(nums), default='1')+oneOf('k K d D')+Word(nums)+Optional(o
 db = dbConnector.Instance()
 mana = {}
 
-def findUserName(update, context):
-    tusername=update.message.from_user.first_name
-    if (update.message.from_user.last_name): tusername=update.message.from_user.last_name
-    if (update.message.from_user.username): tusername=update.message.from_user.username
-    return tusername
+
 #answer functions:
 def answerTxt(update, context, ans):
     ans='@'+findUserName(update, context)+': '+ans
@@ -37,6 +33,19 @@ def sendSticker(update,context,sid):
     context.bot.send_sticker(chat_id=update.message.chat_id, sticker=sid)
 
 #usefull functions
+def findUserName(update, context):
+    tusername=update.message.from_user.first_name
+    if (update.message.from_user.last_name): tusername=update.message.from_user.last_name
+    if (update.message.from_user.username): tusername=update.message.from_user.username
+    return tusername
+def addFriend(update,context):
+    user=update.message.from_user.id
+    chid=update.message.chat.id
+    db.insertFriend(user,chid)
+def rmFriend(update,context):
+    user=update.message.from_user.id
+    chid=update.message.chat.id
+    db.removeFriend(user,chid)
 def listImgR(p):
     valid_images = [".jpg",".gif",".png"]
     list=[]
@@ -132,8 +141,14 @@ def roll(update, context):
         eval(func)
     else: answerTxt(update,context,'Whaaat?')
 def randMember(update, context):
-    list='dupa'
-    answerTxt(update,context,list)
+    chid=update.message.chat.id
+    if int(chid)>0:
+        answerTxt(update,context,'We are alone here...')
+        return true
+    uid=db.getRandomFriend(str(chid))
+    cuser=context.bot.getChatMember(chid, uid)
+    user=cuser.user
+    answerTxt(update,context,user.name)
 def rollSticker(update,context,tag):
     sid=db.getRandomSticker(tag)
     sendSticker(update,context,sid)
@@ -143,6 +158,7 @@ def rollPic(update, context):
 
 def rollChannelPic(update, context):
     global mana
+    addFriend(update, context)
     path='resources/test.png'
     chid=update.message.chat.id
     if(chid>0):
@@ -236,6 +252,7 @@ def main():
     dispatcher.add_handler(CommandHandler('r', restart, Filters.user(user_id=bowner))) #@#TODO filtr na usera
     dispatcher.add_handler(CommandHandler('u', printUpdate, Filters.user(user_id=bowner)))
     dispatcher.add_handler(CommandHandler('addchannel', addChannel, Filters.user(user_id=bowner)))
+    dispatcher.add_handler(MessageHandler(Filters.status_update.left_chat_member,rmFriend))
     #dispatcher.add_handler(MessageHandler(Filters.sticker,printUpdate))
     updater.start_polling()
     updater.idle()
