@@ -20,7 +20,12 @@ t={
 'chphall':'spyta ktokolwiek',
 'chphspec':'spyta ',
 'phadded':'fotka dodana, dzięki!',
-'ctimeout':'Nie no, tyle czasu to ja nie mam...'
+'ctimeout':'Nie no, tyle czasu to ja nie mam...',
+'addanswer':'Dawaj odpowiedź',
+'addquestion':'Najpierw pytanie',
+'answerok':'Zrobione',
+'addrollsterr':'to powinno wyglądac tak: /addrollsticker ALIAS KATEGORIA',
+'addrollstok':'poszło'
 }
 help={
 'main':'''

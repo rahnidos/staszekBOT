@@ -21,6 +21,7 @@ db = dbConnector.Instance()
 mana = {}
 STICKER, CATEGORY = range(2)
 CHANNEL, CHSPECIAL, PHOTO = range(3)
+QUESTION, ANSWER = range(2)
 
 #answer functions:
 def answerTxt(update, context, ans):
@@ -203,10 +204,24 @@ def addChannel(update, context):
             except OSError:
                 ret=t['error']
     answerTxt(update, context, ret)
+
 # converastion handlers
 def addSticker(update, context):
     answerTxt(update, context, t['addstickerst1'])
     return STICKER
+def addRollSticker(update, context):
+    try:
+        a=context.args[0]
+        s=context.args[1]
+    except IndexError:
+        answerTxt(update, context, t['addrollsterr'])
+        return True
+    comm="rollSticker(update,context,''%s'')"% (s)
+    if db.addRollSticker(comm,a):
+        answerTxt(update, context, t['addrollstok'])
+    else:
+        answerTxt(update, context, t['error'])
+    return True
 def stickerWait(update,context):
     user_data = context.user_data
     user_data['stickerid'] = update.message.sticker['file_id']
@@ -214,11 +229,10 @@ def stickerWait(update,context):
     return CATEGORY
 def stickerCatWait(update,context):
     user_data = context.user_data
-    print(user_data['stickerid'])
     if db.addSticker(user_data['stickerid'],update.message.text):
         answerTxt(update, context, t['addstickerst3'])
     else:
-        answerTxt(update, context, t['errpr'])
+        answerTxt(update, context, t['error'])
     return ConversationHandler.END
 def addchphoto(update,context):
     chlist=db.getFriendlyChannels(update.message.from_user.id)
@@ -301,6 +315,28 @@ def chPhotoWait(update,context):
     newFile.download(fname)
     context.bot.sendMessage(chat_id=update.message.chat_id, text=t['phadded'])
     return ConversationHandler.END
+def addAnswer(update, context):
+    try:
+        s=context.args[0]
+        user_data = context.user_data
+        user_data['question']=s
+        answerTxt(update, context, t['addanswer'])
+        return ANSWER
+    except IndexError:
+        answerTxt(update, context, t['addquestion'])
+        return QUESTION
+def questionWait(update, context):
+    user_data = context.user_data
+    user_data['question']=update.message.text
+    answerTxt(update, context, t['addanswer'])
+    return ANSWER
+def answerWait(update, context):
+    user_data = context.user_data
+    if db.addAnswer(user_data['question'],update.message.text):
+        answerTxt(update, context, t['answerok'])
+    else:
+        answerTxt(update, context, t['error'])
+    return ConversationHandler.END
 def cancel(update,context):
     answerTxt(update, context, 'CANCELED')
     return ConversationHandler.END
@@ -348,6 +384,7 @@ def main():
     dispatcher.add_handler(CommandHandler('r', restart, Filters.user(user_id=bowner)))
     dispatcher.add_handler(CommandHandler('u', printUpdate, Filters.user(user_id=bowner)))
     dispatcher.add_handler(CommandHandler('addchannel', addChannel, Filters.user(user_id=bowner)))
+    dispatcher.add_handler(CommandHandler('addrollsticker', addRollSticker, Filters.user(user_id=bowner)))
     dispatcher.add_handler(MessageHandler(Filters.status_update.left_chat_member,rmFriend))
 
 
@@ -362,6 +399,17 @@ def main():
         conversation_timeout=20
     )
     dispatcher.add_handler(add_sticker_handler)
+    add_answer_handler = ConversationHandler(
+        entry_points=[CommandHandler('addanswer', addAnswer,Filters.user(user_id=bowner))],
+        states={
+            QUESTION: [MessageHandler(Filters.text, questionWait)],
+            ANSWER: [MessageHandler(Filters.text, answerWait)],
+            ConversationHandler.TIMEOUT: [MessageHandler(Filters.text | Filters.command, timeout)],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+        conversation_timeout=20
+    )
+    dispatcher.add_handler(add_answer_handler)
     add_chphoto_handler = ConversationHandler(
         entry_points=[CommandHandler('addchphoto', addchphoto)],
         states={
@@ -370,7 +418,7 @@ def main():
             PHOTO: [MessageHandler(Filters.photo, chPhotoWait)],
             ConversationHandler.TIMEOUT: [MessageHandler(Filters.text | Filters.command, timeout)],
         },
-        fallbacks=[CommandHandler('cancel', cancel)]
+        fallbacks=[CommandHandler('cancel', cancel)],
         conversation_timeout=20
     )
     dispatcher.add_handler(add_chphoto_handler)

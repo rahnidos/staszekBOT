@@ -99,3 +99,11 @@ class dbConnector(object):
         q = "select chid, name from friends join channel on friends.chid=channel.id where friends.user=%d" % (uid)
         ret=self.select_list(q)
         return ret
+    def addAnswer(self,question,answer):
+        q = "insert into answers (id,answer,question) values((select max(id) from answers)+1,'%s','%s')" % (answer,question)
+        ret=self.execute(q)
+        return ret
+    def addRollSticker(self,comm,alias):
+        q = "insert into rolls (thing,func) values('%s','%s')" %(alias,comm)
+        ret=self.execute(q)
+        return ret
