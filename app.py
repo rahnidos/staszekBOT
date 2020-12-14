@@ -1,8 +1,6 @@
 from dbConnector import dbConnector
-from telegram.ext import CommandHandler
-from telegram.ext import MessageHandler
-from telegram.ext import Updater
-from telegram.ext import Filters
+from telegram.ext import CommandHandler, MessageHandler, Updater, Filters, ConversationHandler, CallbackQueryHandler
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from pyparsing import *
 #from staszek import staszek
 import logging
@@ -11,6 +9,7 @@ import os
 from random import randint, choice, shuffle, seed, sample
 from time import time, localtime, strftime
 from threading import Thread
+from texts import *
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.INFO)
 
@@ -20,7 +19,8 @@ chpiclimit=0
 dices = Optional(Word(nums), default='1')+oneOf('k K d D')+Word(nums)+Optional(oneOf('- + * /')+Word(nums))
 db = dbConnector.Instance()
 mana = {}
-
+STICKER, CATEGORY = range(2)
+CHANNEL, CHSPECIAL, PHOTO = range(3)
 
 #answer functions:
 def answerTxt(update, context, ans):
@@ -88,10 +88,6 @@ def rollDice(itype,reroll):
     if (reroll==1 and roll==itype):
         tmp_ret.extend(rollDice(itype,1))
     return tmp_ret
-
-
-
-
 def rollDices(d):
     try:
         mod=d[3]+d[4]
@@ -117,21 +113,20 @@ def rollDices(d):
 
 
 def start(update, context):
-    answerTxt(update, context, 'Jestem Bot. Staszek Bot.')
-    #@#TODO Komunikat startowy niech bierze też z bazy jako parametr
+    answerTxt(update, context, t['start'])
 # main commands
 def roll(update, context):
     try:
         s=context.args[0]
     except IndexError:
-        answerTxt(update, context, '?') #@#TODO tekst z bazy tekstów
+        rollSticker(update,context,'what')
         return True
     d=None
     for result in dices.scanString(s):
         d=result[0]
     rolldict=db.getRolls();
     if (not rolldict):
-        answerTxt(update, context, 'stało się coś bardzo złego!')
+        answerTxt(update, context, t['error'])
         return True
     if (d):
         answerTxt(update,context,rollDices(d))
@@ -139,12 +134,12 @@ def roll(update, context):
         func=rolldict[s]
         context.args=context.args[1:]
         eval(func)
-    else: answerTxt(update,context,'Whaaat?')
+    else: rollSticker(update,context,'what')
 def randMember(update, context):
     chid=update.message.chat.id
     if int(chid)>0:
-        answerTxt(update,context,'We are alone here...')
-        return true
+        answerTxt(update,context,t['nogroup'])
+        return True
     uid=db.getRandomFriend(str(chid))
     cuser=context.bot.getChatMember(chid, uid)
     user=cuser.user
@@ -162,55 +157,156 @@ def rollChannelPic(update, context):
     path='resources/test.png'
     chid=update.message.chat.id
     if(chid>0):
-        answerTxt(update,context,'Yeah... nice try')
+        answerTxt(update,context,t['notallowed'])
         return True
     chdir=hpath+str(chid)
     if(not os.path.isdir(chdir)):
-        answerTxt(update,context,'Yeah... nice try')
+        answerTxt(update,context,t['notallowed'])
         return True
     udir=chdir+'/'+str(update.message.from_user.id)
     if(os.path.isdir(udir)):
-        answerPicFromPath(update,context,randomPicFromPath(udir),'no mana needed')
+        answerPicFromPath(update,context,randomPicFromPath(udir),t['freeroll'])
     else:
         if not chid in mana: mana[chid]=0
         if (mana[chid]<time()):
             m=randint(1,3600)
             mana[chid]=time()+m
-            answerPicFromPath(update,context,randomPicFromPath(chdir),'Countdown:'+str(m))
+            newtime=localtime(mana[chid])
+            answerPicFromPath(update,context,randomPicFromPath(chdir),t['countdown']+str(m)+'s ('+strftime("%H:%M:%S",newtime)+')')
         else:
-            answerTxt(update,context,'Nie mam wystarczająco many')
+            answerTxt(update,context,t['nomana'])
     return True
-
 def question(update, context):
     try:
         q=context.args[0]
     except IndexError:
-        answerTxt(update, context, '?') #@#TODO tekst z bazy tekstów
+        answerTxt(update, context, t['dunno'])
         return True
     a=db.getRandomAnswer(context.args[0])
-    if not a: a='nie wiem :(' #@#TODO tekst z bazy
+    if not a: a=t['dunno']
     answerTxt(update, context, a)
 
 #ADM Functions
 def printUpdate(update, context):
     print(str(update))
-
 def addChannel(update, context):
     chname=update.message.chat['title']
     chid=update.message.chat['id']
     ret='OK'
     if(not db.insertChannel(chid, chname)):
-        ret='Operation failed'
+        ret=t['error']
     else:
         chdir=hpath+str(chid)
         if(not os.path.isdir(chdir)):
             try:
                 os.mkdir(chdir)
             except OSError:
-                ret='Cannot create directory for photos'
+                ret=t['error']
     answerTxt(update, context, ret)
-
-
+# converastion handlers
+def addSticker(update, context):
+    answerTxt(update, context, t['addstickerst1'])
+    return STICKER
+def stickerWait(update,context):
+    user_data = context.user_data
+    user_data['stickerid'] = update.message.sticker['file_id']
+    answerTxt(update, context, t['addstickerst2'])
+    return CATEGORY
+def stickerCatWait(update,context):
+    user_data = context.user_data
+    print(user_data['stickerid'])
+    if db.addSticker(user_data['stickerid'],update.message.text):
+        answerTxt(update, context, t['addstickerst3'])
+    else:
+        answerTxt(update, context, t['errpr'])
+    return ConversationHandler.END
+def addchphoto(update,context):
+    chlist=db.getFriendlyChannels(update.message.from_user.id)
+    if not chlist:
+        answerTxt(update, context, t['notfriend'])
+        return ConversationHandler.END
+    if len(chlist) == 1:
+        user_data = context.user_data
+        user_data['phchid']=chlist[0][0]
+        spec=checkSpecialPhotos(chlist[0][0])
+        if len(spec)>0:
+            olist=[(t['chphall'],0)]
+            for el in spec:
+                cuser=context.bot.getChatMember(chlist[0][0], int(el))
+                user=cuser.user
+                olist.append((t['chphspec']+user.name,int(el)))
+            buttons=[]
+            for el in olist:
+                buttons.append(InlineKeyboardButton(el[0], callback_data=el[1]))
+            reply_markup=InlineKeyboardMarkup(buildMenu(buttons,n_cols=1))
+            update.message.reply_text(text=t['specphoto'],reply_markup=reply_markup)
+            return CHSPECIAL
+        else:
+            answerTxt(update, context, t['photowait'])
+            return PHOTO
+    else:
+        buttons=[]
+        for el in chlist:
+            buttons.append(InlineKeyboardButton(el[1], callback_data=el[0]))
+        reply_markup=InlineKeyboardMarkup(buildMenu(buttons,n_cols=1))
+        update.message.reply_text(t['choosegroup'], reply_markup=reply_markup)
+        return CHANNEL
+def buildMenu(buttons,n_cols,header_buttons=None,footer_buttons=None):
+    menu = [buttons[i:i + n_cols] for i in range(0, len(buttons), n_cols)]
+    if header_buttons:
+        menu.insert(0, header_buttons)
+    if footer_buttons:
+        menu.append(footer_buttons)
+    return menu
+def checkSpecialPhotos(chid):
+    chdir=hpath+str(chid)
+    subfolders = [ f.name for f in os.scandir(chdir) if f.is_dir() ]
+    return subfolders
+def chNameWait(update,context):
+    user_data = context.user_data
+    query = update.callback_query
+    query.answer()
+    user_data['phchid']=query.data
+    spec=checkSpecialPhotos(query.data)
+    if len(spec)>0:
+        olist=[(t['chphall'],0)]
+        for el in spec:
+            cuser=context.bot.getChatMember(query.data, int(el))
+            user=cuser.user
+            olist.append((t['chphspec']+user.name,int(el)))
+        buttons=[]
+        for el in olist:
+            buttons.append(InlineKeyboardButton(el[0], callback_data=el[1]))
+        reply_markup=InlineKeyboardMarkup(buildMenu(buttons,n_cols=1))
+        query.edit_message_text(text=t['specphoto'],reply_markup=reply_markup)
+        return CHSPECIAL
+    else:
+        query.edit_message_text(text=t['photowait'])
+        return PHOTO
+def chSpecWait(update,context):
+    user_data = context.user_data
+    query = update.callback_query
+    query.answer()
+    user_data['specphoto']=query.data
+    query.edit_message_text(text=t['photowait'])
+    return PHOTO
+def chPhotoWait(update,context):
+    user_data = context.user_data
+    file_id = update.message.photo[-1].file_id
+    newFile = context.bot.getFile(file_id)
+    if int(user_data['specphoto'])>0:
+        fname=hpath+str(user_data['phchid'])+"/"+str(user_data['specphoto'])+"/"+str(int(time()))+'.jpg'
+    else:
+        fname=hpath+str(user_data['phchid'])+"/"+str(int(time()))+'.jpg'
+    newFile.download(fname)
+    context.bot.sendMessage(chat_id=update.message.chat_id, text=t['phadded'])
+    return ConversationHandler.END
+def cancel(update,context):
+    answerTxt(update, context, 'CANCELED')
+    return ConversationHandler.END
+def timeout(update,context):
+    answerTxt(update, context, t['ctimeout'])
+    return ConversationHandler.END
 def main():
     def stop_and_restart():
             updater.stop()
@@ -218,7 +314,7 @@ def main():
             os.execl(sys.executable, '"'+sys.executable+'"', *sys.argv)
 
     def restart(update, context):
-            update.message.reply_text('Bot is restarting...')
+            update.message.reply_text(t['restart'])
             Thread(target=stop_and_restart).start()
 
 #BOT Creation
@@ -249,10 +345,36 @@ def main():
             exec(strf)
             dispatcher.add_handler(CommandHandler(com[0], eval(com[0])))
 
-    dispatcher.add_handler(CommandHandler('r', restart, Filters.user(user_id=bowner))) #@#TODO filtr na usera
+    dispatcher.add_handler(CommandHandler('r', restart, Filters.user(user_id=bowner)))
     dispatcher.add_handler(CommandHandler('u', printUpdate, Filters.user(user_id=bowner)))
     dispatcher.add_handler(CommandHandler('addchannel', addChannel, Filters.user(user_id=bowner)))
     dispatcher.add_handler(MessageHandler(Filters.status_update.left_chat_member,rmFriend))
+
+
+    add_sticker_handler = ConversationHandler(
+        entry_points=[CommandHandler('addsticker', addSticker,Filters.user(user_id=bowner))],
+        states={
+            STICKER: [MessageHandler(Filters.sticker, stickerWait)],
+            CATEGORY: [MessageHandler(Filters.text,stickerCatWait)],
+            ConversationHandler.TIMEOUT: [MessageHandler(Filters.text | Filters.command, timeout)],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+        conversation_timeout=20
+    )
+    dispatcher.add_handler(add_sticker_handler)
+    add_chphoto_handler = ConversationHandler(
+        entry_points=[CommandHandler('addchphoto', addchphoto)],
+        states={
+            CHANNEL: [CallbackQueryHandler(chNameWait)],
+            CHSPECIAL: [CallbackQueryHandler(chSpecWait)],
+            PHOTO: [MessageHandler(Filters.photo, chPhotoWait)],
+            ConversationHandler.TIMEOUT: [MessageHandler(Filters.text | Filters.command, timeout)],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)]
+        conversation_timeout=20
+    )
+    dispatcher.add_handler(add_chphoto_handler)
+
     #dispatcher.add_handler(MessageHandler(Filters.sticker,printUpdate))
     updater.start_polling()
     updater.idle()

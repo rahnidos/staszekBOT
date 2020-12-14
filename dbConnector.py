@@ -1,5 +1,4 @@
 from singleton import Singleton
-#from staszek imort staszek
 import sqlite3
 import os
 @Singleton
@@ -91,4 +90,12 @@ class dbConnector(object):
     def removeFriend(self, user, chid):
         q = "delete from friends where chid='%s' and user =%d" % (str(chid), user)
         ret=self.execute(q)
+        return ret
+    def addSticker(self, sid, tag):
+        q = "insert into stickers (fileid,tag) values('%s','%s')" %(sid,tag)
+        ret=self.execute(q)
+        return ret
+    def getFriendlyChannels(self,uid):
+        q = "select chid, name from friends join channel on friends.chid=channel.id where friends.user=%d" % (uid)
+        ret=self.select_list(q)
         return ret
