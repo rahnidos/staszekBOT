@@ -343,6 +343,16 @@ def cancel(update,context):
 def timeout(update,context):
     answerTxt(update, context, t['ctimeout'])
     return ConversationHandler.END
+def help(update,context):
+    chid=update.message.chat.id
+    helpfile=hpath+str(chid)+'/help.html'
+    if not os.path.isfile(helpfile):
+        helpfile='./help.html'
+    with open(helpfile, 'r',encoding="utf-8") as helpf:
+        update.message.reply_text(helpf.read(),parse_mode='HTML')
+
+
+    return True
 def main():
     def stop_and_restart():
             updater.stop()
@@ -383,6 +393,7 @@ def main():
 
     dispatcher.add_handler(CommandHandler('r', restart, Filters.user(user_id=bowner)))
     dispatcher.add_handler(CommandHandler('u', printUpdate, Filters.user(user_id=bowner)))
+    dispatcher.add_handler(CommandHandler('help', help))
     dispatcher.add_handler(CommandHandler('addchannel', addChannel, Filters.user(user_id=bowner)))
     dispatcher.add_handler(CommandHandler('addrollsticker', addRollSticker, Filters.user(user_id=bowner)))
     dispatcher.add_handler(MessageHandler(Filters.status_update.left_chat_member,rmFriend))
@@ -399,6 +410,7 @@ def main():
         conversation_timeout=20
     )
     dispatcher.add_handler(add_sticker_handler)
+
     add_answer_handler = ConversationHandler(
         entry_points=[CommandHandler('addanswer', addAnswer,Filters.user(user_id=bowner))],
         states={
@@ -410,8 +422,9 @@ def main():
         conversation_timeout=20
     )
     dispatcher.add_handler(add_answer_handler)
+
     add_chphoto_handler = ConversationHandler(
-        entry_points=[CommandHandler('addchphoto', addchphoto)],
+        entry_points=[CommandHandler('addpic', addchphoto)],
         states={
             CHANNEL: [CallbackQueryHandler(chNameWait)],
             CHSPECIAL: [CallbackQueryHandler(chSpecWait)],
