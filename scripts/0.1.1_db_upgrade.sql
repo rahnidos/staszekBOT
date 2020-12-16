@@ -6,4 +6,5 @@ CREATE TABLE "areas" (
 	"minlong"	REAL,
 	"w"	INTEGER,
 	PRIMARY KEY("name")
-)
+);
+INSERT INTO "main"."commands" ("alias", "real", "type") VALUES ('where', 'rollLocation', '1');
