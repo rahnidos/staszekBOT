@@ -164,7 +164,6 @@ def rollLocation(update, context):
                 wa.append(loc)
     if len(wa)>0: a=a+wa
     area=choice(a)
-    print(area)
     loc={
         "lat":round(uniform(area[0], area[1]), 6),
         "long":round(uniform(area[2], area[3]), 6)
