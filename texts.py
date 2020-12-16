@@ -27,20 +27,3 @@ t={
 'addrollsterr':'to powinno wyglądac tak: /addrollsticker ALIAS KATEGORIA',
 'addrollstok':'poszło'
 }
-help={
-'main':'''
-Dostępne komendy:
-
-Rzeczy do rzucania:
-
-Kości - [liczba][k,K,d,D][ścianki][modyfikator]
-k,d - nie przerzuca maksymalnych wyników
-K,D - przerzuca wyniki
-Przykład: /roll 10K4+3 oznacza rzut dzisięcioma kośćmi czterościennymi,
-jeśli wypdanie cztery, wykonany będzie następny rzut. Do sumy kości zostanie dodane 3.
-Możliwy wynik takiego rzutu: (1+1+2+2+2+3+3+3+3+3+4+4+4+4+4+4+4)=51
-
-Stickery - wymagane słowo kluczowe. Rzuca losowym stickerem.
-
-'''
-}

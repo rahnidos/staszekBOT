@@ -6,7 +6,7 @@ from pyparsing import *
 import logging
 import sys
 import os
-from random import randint, choice, shuffle, seed, sample
+from random import randint, choice, shuffle, seed, sample, uniform
 from time import time, localtime, strftime
 from threading import Thread
 from texts import *
@@ -32,7 +32,8 @@ def answerPicFromPath(update, context, path, caption):
     context.bot.send_photo(chat_id=update.message.chat.id, photo=open(path, 'rb'), caption=capt)
 def sendSticker(update,context,sid):
     context.bot.send_sticker(chat_id=update.message.chat_id, sticker=sid)
-
+def sendLocation(update, context, loc):
+    context.bot.send_location(chat_id=update.message.chat_id, latitude=loc['lat'], longitude=loc['long'])
 #usefull functions
 def findUserName(update, context):
     tusername=update.message.from_user.first_name
@@ -151,6 +152,24 @@ def rollSticker(update,context,tag):
 def rollPic(update, context):
     path='resources/test.png'
     answerPicFromPath(update,context,path,'test')
+def rollLocation(update, context):
+    a=db.getAreas()
+    wa=[]
+    if not a:
+        answerTxt(update,context,t['error'])
+        return True
+    for loc in a:
+        if loc[4]>1:
+            for i in range(loc[4]-1):
+                wa.append(loc)
+    if len(wa)>0: a=a+wa
+    area=choice(a)
+    print(area)
+    loc={
+        "lat":round(uniform(area[0], area[1]), 6),
+        "long":round(uniform(area[2], area[3]), 6)
+    }
+    sendLocation(update,context,loc)
 
 def rollChannelPic(update, context):
     global mana

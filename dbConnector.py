@@ -107,3 +107,10 @@ class dbConnector(object):
         q = "insert into rolls (thing,func) values('%s','%s')" %(alias,comm)
         ret=self.execute(q)
         return ret
+    def getAreas(self,tag=''):
+        if tag:
+            q="select minlat,maxlat,minlong,maxlong,w,INSTR(name, '%s') tag  from areas where tag>0"% (tag)
+        else:
+            q="select minlat,maxlat,minlong,maxlong,w from areas"
+        ret=self.select_list(q)
+        return ret

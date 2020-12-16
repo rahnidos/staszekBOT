@@ -1,0 +1,12 @@
+INSERT INTO "main"."areas" ("name", "maxlat", "maxlong", "minlat", "minlong", "w") VALUES ('PL NW', '54.84', '19.0', '52.0', '14.12', '1');
+INSERT INTO "main"."areas" ("name", "maxlat", "maxlong", "minlat", "minlong", "w") VALUES ('PL SW', '52.0', '19.0', '49.04', '14.12', '1');
+INSERT INTO "main"."areas" ("name", "maxlat", "maxlong", "minlat", "minlong", "w") VALUES ('PL NE', '54.84', '24.15', '52.0', '19.0', '1');
+INSERT INTO "main"."areas" ("name", "maxlat", "maxlong", "minlat", "minlong", "w") VALUES ('PL SE', '52.0', '24.15', '49.04', '19.0', '1');
+INSERT INTO "main"."areas" ("name", "maxlat", "maxlong", "minlat", "minlong", "w") VALUES ('EU', '81.86', '40.22', '12.03', '-70.06', '1');
+INSERT INTO "main"."areas" ("name", "maxlat", "maxlong", "minlat", "minlong", "w") VALUES ('AF', '37.54', '63.5', '-54.47', '-25.37', '1');
+INSERT INTO "main"."areas" ("name", "maxlat", "maxlong", "minlat", "minlong", "w") VALUES ('AS', '55.43', '146.02', '-10.99', '25.66', '1');
+INSERT INTO "main"."areas" ("name", "maxlat", "maxlong", "minlat", "minlong", "w") VALUES ('NA', '83.46', '-11.41', '5.5', '-118.73', '1');
+INSERT INTO "main"."areas" ("name", "maxlat", "maxlong", "minlat", "minlong", "w") VALUES ('SA', '13.39', '-29.3', '-55.98', '-109.46', '1');
+INSERT INTO "main"."areas" ("name", "maxlat", "maxlong", "minlat", "minlong", "w") VALUES ('PL DGL', '51.67', '16.13', '51.64', '16.03', '3');
+INSERT INTO "main"."areas" ("name", "maxlat", "maxlong", "minlat", "minlong", "w") VALUES ('PL DW', '51.16', '17.0', '51.04', '16.9', '3');
+INSERT INTO "main"."areas" ("name", "maxlat", "maxlong", "minlat", "minlong", "w") VALUES ('PL W', '52.3', '21.11', '52.12', '20.88', '3');
