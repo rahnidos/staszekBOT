@@ -274,6 +274,7 @@ def addchphoto(update,context):
             update.message.reply_text(text=t['specphoto'],reply_markup=reply_markup)
             return CHSPECIAL
         else:
+            user_data['specphoto']=0
             answerTxt(update, context, t['photowait'])
             return PHOTO
     else:
@@ -313,6 +314,7 @@ def chNameWait(update,context):
         query.edit_message_text(text=t['specphoto'],reply_markup=reply_markup)
         return CHSPECIAL
     else:
+        user_data['specphoto']=0
         query.edit_message_text(text=t['photowait'])
         return PHOTO
 def chSpecWait(update,context):

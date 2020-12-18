@@ -1,3 +1,6 @@
+## 0.1.2
+Adding picture bug fixed
+
 ## 0.1.1
 
 New command /where for random location.
