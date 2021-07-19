@@ -208,6 +208,10 @@ def question(update, context):
 #ADM Functions
 def printUpdate(update, context):
     print(str(update))
+def printChAdmins(update, context):
+    group=context.bot.get_chat_administrators(update.message.chat.id)
+    for admin in group:
+        print(admin)
 def addChannel(update, context):
     chname=update.message.chat['title']
     chid=update.message.chat['id']
@@ -413,6 +417,7 @@ def main():
 
     dispatcher.add_handler(CommandHandler('r', restart, Filters.user(user_id=bowner)))
     dispatcher.add_handler(CommandHandler('u', printUpdate, Filters.user(user_id=bowner)))
+    dispatcher.add_handler(CommandHandler('chadmins', printChAdmins, Filters.user(user_id=bowner)))
     dispatcher.add_handler(CommandHandler('help', help))
     dispatcher.add_handler(CommandHandler('addchannel', addChannel, Filters.user(user_id=bowner)))
     dispatcher.add_handler(CommandHandler('addrollsticker', addRollSticker, Filters.user(user_id=bowner)))
