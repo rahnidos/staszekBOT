@@ -268,7 +268,12 @@ def addchphoto(update,context):
         if len(spec)>0:
             olist=[(t['chphall'],0)]
             for el in spec:
-                cuser=context.bot.getChatMember(chlist[0][0], int(el))
+                try:
+                    cuser=context.bot.getChatMember(chlist[0][0], int(el))
+                except:
+                    user_data['specphoto']=0
+                    answerTxt(update, context, t['photowait'])
+                    return PHOTO
                 user=cuser.user
                 olist.append((t['chphspec']+user.name,int(el)))
             buttons=[]
@@ -308,7 +313,12 @@ def chNameWait(update,context):
     if len(spec)>0:
         olist=[(t['chphall'],0)]
         for el in spec:
-            cuser=context.bot.getChatMember(query.data, int(el))
+            try:
+                cuser=context.bot.getChatMember(query.data, int(el))
+            except:
+                user_data['specphoto']=0
+                query.edit_message_text(text=t['photowait'])
+                return PHOTO
             user=cuser.user
             olist.append((t['chphspec']+user.name,int(el)))
         buttons=[]
