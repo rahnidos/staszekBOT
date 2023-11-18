@@ -1,5 +1,5 @@
 from dbConnector import dbConnector
-from telegram.ext import CommandHandler, MessageHandler, Updater, Filters, ConversationHandler, CallbackQueryHandler
+from telegram.ext import CommandHandler, MessageHandler, Updater, filters, ConversationHandler, CallbackQueryHandler, Application
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from pyparsing import *
 #from staszek import staszek
@@ -407,15 +407,16 @@ def main():
     if btoken==False:
         logging.error('No token! Did you configured this app correctly?')
         sys.exit(1)
-    updater = Updater(token=btoken, use_context=True)
-    dispatcher = updater.dispatcher
+    #updater = Updater(token=btoken, use_context=True)
+    application=Application.builder().token(btoken).build()
+    #dispatcher = updater.dispatcher
 
 
 
     comlist=db.getCommands()
     for com in comlist:
         if com[2]==1:
-            dispatcher.add_handler(CommandHandler(com[0], eval(com[1])))
+            application.add_handler(CommandHandler(com[0], eval(com[1])))
         if com[2]==2:
             c=com[1].split(" ")
             strf="""def %s(update, context):
@@ -423,57 +424,57 @@ def main():
                 %s(update, context)
                 """ % (com[0],c[1:],c[0])
             exec(strf)
-            dispatcher.add_handler(CommandHandler(com[0], eval(com[0])))
+            application.add_handler(CommandHandler(com[0], eval(com[0])))
 
-    dispatcher.add_handler(CommandHandler('r', restart, Filters.user(user_id=bowner)))
-    dispatcher.add_handler(CommandHandler('u', printUpdate, Filters.user(user_id=bowner)))
-    dispatcher.add_handler(CommandHandler('chadmins', printChAdmins, Filters.user(user_id=bowner)))
-    dispatcher.add_handler(CommandHandler('help', help))
-    dispatcher.add_handler(CommandHandler('addchannel', addChannel, Filters.user(user_id=bowner)))
-    dispatcher.add_handler(CommandHandler('addrollsticker', addRollSticker, Filters.user(user_id=bowner)))
-    dispatcher.add_handler(MessageHandler(Filters.status_update.left_chat_member,rmFriend))
+    application.add_handler(CommandHandler('r', restart, filters.User(user_id=bowner)))
+    application.add_handler(CommandHandler('u', printUpdate, filters.User(user_id=bowner)))
+    application.add_handler(CommandHandler('chadmins', printChAdmins, filters.User(user_id=bowner)))
+    application.add_handler(CommandHandler('help', help))
+    application.add_handler(CommandHandler('addchannel', addChannel, filters.User(user_id=bowner)))
+    application.add_handler(CommandHandler('addrollsticker', addRollSticker, filters.User(user_id=bowner)))
+    application.add_handler(MessageHandler(filters.StatusUpdate.LEFT_CHAT_MEMBER,rmFriend))
 
 
     add_sticker_handler = ConversationHandler(
-        entry_points=[CommandHandler('addsticker', addSticker,Filters.user(user_id=bowner))],
+        entry_points=[CommandHandler('addsticker', addSticker,filters.User(user_id=bowner))],
         states={
-            STICKER: [MessageHandler(Filters.sticker, stickerWait)],
-            CATEGORY: [MessageHandler(Filters.text,stickerCatWait)],
-            ConversationHandler.TIMEOUT: [MessageHandler(Filters.text | Filters.command, timeout)],
+            STICKER: [MessageHandler(filters.Sticker, stickerWait)],
+            CATEGORY: [MessageHandler(filters.Text,stickerCatWait)],
+            ConversationHandler.TIMEOUT: [MessageHandler(filters.Text | filters.Command, timeout)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
         conversation_timeout=20
     )
-    dispatcher.add_handler(add_sticker_handler)
+    application.add_handler(add_sticker_handler)
 
     add_answer_handler = ConversationHandler(
-        entry_points=[CommandHandler('addanswer', addAnswer,Filters.user(user_id=bowner))],
+        entry_points=[CommandHandler('addanswer', addAnswer,filters.User(user_id=bowner))],
         states={
-            QUESTION: [MessageHandler(Filters.text, questionWait)],
-            ANSWER: [MessageHandler(Filters.text, answerWait)],
-            ConversationHandler.TIMEOUT: [MessageHandler(Filters.text | Filters.command, timeout)],
+            QUESTION: [MessageHandler(filters.Text, questionWait)],
+            ANSWER: [MessageHandler(filters.Text, answerWait)],
+            ConversationHandler.TIMEOUT: [MessageHandler(filters.Text | filters.Command, timeout)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
         conversation_timeout=20
     )
-    dispatcher.add_handler(add_answer_handler)
+    application.add_handler(add_answer_handler)
 
     add_chphoto_handler = ConversationHandler(
         entry_points=[CommandHandler('addpic', addchphoto)],
         states={
             CHANNEL: [CallbackQueryHandler(chNameWait)],
             CHSPECIAL: [CallbackQueryHandler(chSpecWait)],
-            PHOTO: [MessageHandler(Filters.photo, chPhotoWait)],
-            ConversationHandler.TIMEOUT: [MessageHandler(Filters.text | Filters.command, timeout)],
+            PHOTO: [MessageHandler(filters._Photo, chPhotoWait)],
+            ConversationHandler.TIMEOUT: [MessageHandler(filters.Text | filters.Command, timeout)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
         conversation_timeout=20
     )
-    dispatcher.add_handler(add_chphoto_handler)
+    application.add_handler(add_chphoto_handler)
 
     #dispatcher.add_handler(MessageHandler(Filters.sticker,printUpdate))
-    updater.start_polling()
-    updater.idle()
+    application.run_polling(1.0)
+    #application.idle()
 
 if __name__ == '__main__':
 	main()
