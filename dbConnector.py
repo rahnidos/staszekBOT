@@ -5,8 +5,8 @@ import os
 class dbConnector(object):
 
     def __init__(self):
-        hpath=os.environ.get('STASZEKHOME')
-        self.__conn = sqlite3.connect(hpath+'staszek.db',check_same_thread=False)
+        dbpath=os.path.join(os.environ.get('STASZEKHOME'),'staszek.db')
+        self.__conn = sqlite3.connect(dbpath,check_same_thread=False)
         pass
 
     def __str__(self):
