@@ -1,29 +1,4 @@
-t={
-'start':'Hi, I am an instance of StaszekBot',
-'dunno':'ooooooh... yes...',
-'error':'something terrible just happend...',
-'nogroup':'we are alone here...',
-'notallowed':'yeah, nice try...',
-'freeroll':'free roll for you',
-'countdown':'Next roll in ',
-'nomana':'I have no mana for this spell',
-'restart':'I am rebooting now...',
-'addstickerst1':'Send sticker',
-'addstickerst2':'Name category',
-'addstickerst3':'Sticker saved',
-'notfriend':'You are not friend of mine',
-'friendone':'Ok, I know you',
-'choosegroup':'Choose the group',
-'photowait':'Send photo',
-'photospec':'It is not so easy.',
-'specphoto':'This photo is for:',
-'chphall':'anybody',
-'chphspec':'for ',
-'phadded':'thanks for new photo',
-'ctimeout':'I cannot wait so loooooong...',
-'addanswer':'Ok send answer',
-'addquestion':'First - question',
-'answerok':'Done',
-'addrollsterr':'It should be: /addrollsticker ALIAS CATEGORY',
-'addrollstok':'done'
+txt={
+'start':'Hej, jestem Staszek',
+'aierr':'Nie mogę w tej chwili rozmawiać...'
 }

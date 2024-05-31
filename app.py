@@ -24,7 +24,7 @@ def prepareCommandsHandlers():
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="Hola soy Staszek")
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=R.t['start'])
 
 async def question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     answer=G.askGepetto(" ".join(context.args))
