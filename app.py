@@ -1,52 +1,94 @@
 from dbConnector import dbConnector
-from registry import registry
 import logging
+from typing import Callable
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
-from gepetto import gepetto
+from dotenv import load_dotenv
+import os
+import dice as dice_module
 
 
-R = registry.Instance()
+load_dotenv()
+debug = os.getenv("DEBUG")
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+ADMIN_IDS=os.getenv("ADMIN_IDS").split(",") if os.getenv("ADMIN_IDS") else []
 D = dbConnector.Instance()
-G = gepetto()
+
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.WARN
 )
 
+def admin_check(update, context) -> bool:
+    admin_ids = ADMIN_IDS
+    user_id = update.effective_user.id
+    return str(user_id) in admin_ids
 
-def prepareCommandsHandlers():
-    rCommList=D.select_list('select real from commands where type=1')
-    for command in rCommList:
-        application.add_handler(CommandHandler(command[0],eval(command[0])))
+async def start_handler(update, context):
+    await update.message.reply_text("uźyj /help, źeby zobaczyć co umiem")
 
+async def restart_bot(update, context):
+    await update.message.reply_text("OK")
+   
+async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(f'Hello {update.effective_user.first_name}')
 
+async def dice_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not context.args:
+        await update.message.reply_text("Użyj: /dice k6+4 (albo inny format dice)")
+        return
 
+    dice_expr = context.args[0]
+    d = dice_module.Dice.Instance()
+    result = d.roll(dice_expr)
+    await update.message.reply_text(f'{result}')
+    
+COMMANDS = [
+    {
+        "name": "start",
+        "handler": start_handler,
+        "only_admin": False,
+    },
+    {
+        "name": "restart",
+        "handler": restart_bot,
+        "only_admin": True,
+    },
+    {
+        "name": "dice",
+        "handler": dice_cmd,
+        "only_admin": False,
+    },
+]
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=R.t['start'])
+async def admin_cmd(update, context, handler):
+    if not admin_check(update, context):
+        await update.message.reply_text("Za cieńki w uszach jesteś")
+        return
+    await handler(update, context)
 
-async def question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    answer=G.askGepetto(" ".join(context.args))
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=answer)
+def setup_commands(app):
+    for cmd in COMMANDS:
+        name=cmd["name"]
+        handler=cmd["handler"]
+        only_admin=cmd["only_admin"]
 
-async def roll(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="Roll Handler")
+        if only_admin:
+            async def _admin_handler(update, context, handler=handler):
+                await admin_cmd(update, context, handler)
+            app.add_handler(CommandHandler(name, _admin_handler))
+        else:
+            app.add_handler(CommandHandler(name, handler))
 
-async def randMember(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="randMemebr Handler")
-
-async def rollLocation(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="roll Location")
-
+async def error_handler(update, context):
+    logging.error(f"Update {update} caused error {context.error}")
 
 if __name__ == '__main__':
 
     
-    application = ApplicationBuilder().token(R.cfg['token']).build()
-    
-    
-    prepareCommandsHandlers()
-    
-    application.run_polling()
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("hello", hello))
+    app.add_error_handler(error_handler)
+    setup_commands(app)    
+    app.run_polling()
 
