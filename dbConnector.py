@@ -1,11 +1,14 @@
 from singleton import Singleton
 import sqlite3
+from dotenv import load_dotenv
 import os
 @Singleton
 class dbConnector(object):
 
     def __init__(self):
-        dbpath=os.path.join(os.environ.get('STASZEKHOME'),'staszek.db')
+        load_dotenv()
+        STASZEKHOME = os.getenv("STASZEKHOME")
+        dbpath=os.path.join(STASZEKHOME,'staszek.db')
         self.__conn = sqlite3.connect(dbpath,check_same_thread=False)
         pass
 
@@ -27,13 +30,17 @@ class dbConnector(object):
         if r: return r
         else: return False
 
-    def execute(self, q):
+    def execute(self, q, params=None):
         #@# TODO: błędy wyrzucić do loggera
         cur = self.__conn.cursor()
         try:
-            cur.execute(q)
+            if params:
+                cur.execute(q, params)
+            else:
+                cur.execute(q)
             self.__conn.commit()
-        except:
+        except Exception as e:
+            print(f"Database error: {e}")  # Tymczasowo, zamiast loggera
             return False
         cur.close()
         return True
