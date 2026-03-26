@@ -15,16 +15,31 @@ class dbConnector(object):
     def __str__(self):
         return 'Database connection object'
 
-    def select_single(self, q):
+    def select_single(self, q, params=None):
         cur = self.__conn.cursor()
-        cur.execute(q)
+        try:
+            if params:
+                cur.execute(q, params)
+            else:
+                cur.execute(q)
+        except Exception as e:
+            print(f"Database error: {e}")  # Tymczasowo, zamiast loggera
+            return False
         r = cur.fetchone()
         cur.close()
         if r: return r[0]
         else: return False
 
-    def select_list(self, q):
+    def select_list(self, q, params=None):
         cur = self.__conn.cursor()
+        try:
+            if params:
+                cur.execute(q, params)
+            else:
+                cur.execute(q)
+        except Exception as e:
+            print(f"Database error: {e}")  # Tymczasowo, zamiast loggera
+            return False
         cur.execute(q)
         r = cur.fetchall()
         if r: return r

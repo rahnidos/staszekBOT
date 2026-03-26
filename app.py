@@ -6,6 +6,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Conve
 from dotenv import load_dotenv
 import os
 import dice as dice_module
+import datetime
 
 
 load_dotenv()
@@ -17,6 +18,7 @@ ADMIN_IDS=os.getenv("ADMIN_IDS").split(",") if os.getenv("ADMIN_IDS") else []
 D = dbConnector.Instance()
 
 ASK_FOLDER_ID = 1
+SELECT_FOLDER, SELECT_PHOTO = 1, 2
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -74,6 +76,42 @@ async def handle_folder_id(update: Update, context:ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Folder gotowy")
     return ConversationHandler.END
 
+async def new_picture(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    args = context.args
+    if not admin_check(update, context):
+        await update.message.reply_text("Za cieńki w uszach jesteś")
+        return ConversationHandler.END
+    if not args:
+        await update.message.reply_text("Nie ma takiego dodawania bez sensu")
+        return ConversationHandler.END
+    folder_name = " ".join(args)
+    folder_id=D.select_single("SELECT id FROM folders where name=?", (folder_name,))
+    if not folder_id:
+        await update.message.reply_text("Nie ma takiego dodawania bez sensu")
+        return ConversationHandler.END
+    context.user_data["pending_folder_id"] = folder_id
+    context.user_data["pending_folder_name"] = folder_name
+    await update.message.reply_text("Dawaj obrazek")
+    return SELECT_PHOTO
+
+async def handle_picture(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    folder_name = context.user_data["pending_folder_name"]
+    folder_id = context.user_data["pending_folder_id"]
+    path=os.path.join(STASZEKHOME, "pics", folder_name)
+    if not update.message.photo:
+        await update.message.reply_text("Średnio to wygąlda")
+        return SELECT_PHOTO
+    photo = update.message.photo[-1] 
+    file = await context.bot.get_file(photo.file_id)
+    ts = int(datetime.datetime.now().timestamp())
+    fname = f"p_{ts}.jpg"
+    target_path = os.path.join(path, fname)
+    await file.download_to_drive(target_path)
+    D.execute("INSERT INTO pics (filename, folder, stat) VALUES (?,?,'o')", (fname,folder_id))
+    await update.message.reply_text(f"dodane")
+    return ConversationHandler.END
+
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Anulowano.")
     return ConversationHandler.END
@@ -116,16 +154,42 @@ def setup_commands(app):
         else:
             app.add_handler(CommandHandler(name, handler))
 
+def register_photos():
+    folders=D.select_list("SELECT id, name FROM folders")
+    pictures=D.select_list("SELECT folder, filename FROM pics")
+    if not pictures: registered =('','')
+    else: registered = {(row[0], row[1]) for row in pictures}
+    insert_values="INSERT INTO pics (filename, folder, stat) VALUES "
+    found=False
+    for folder in folders:
+        path=os.path.join(STASZEKHOME,'pics',folder[1])
+        picfiles= [
+            plik for plik in os.listdir(path)
+            if os.path.isfile(os.path.join(path,plik))
+            and plik.lower().endswith(('.jpg','.png','.gif'))
+        ]
+        for picfile in picfiles:
+            if (folder[0],picfile) in registered:
+                continue
+            else:
+                found=True
+                insert_values+="('%s','%s','o')," % (picfile,folder[0]) #o jak otwarty do losowania
+    if found:
+        insert_values=insert_values[:-1]+";"
+        D.execute(insert_values)   
+    return True
+
 async def error_handler(update, context):
     logging.error(f"Update {update} caused error {context.error}")
 
 def initialize():
     D.execute("CREATE TABLE IF NOT EXISTS friends (id INTEGER PRIMARY KEY, name TEXT)")
     D.execute("""CREATE TABLE IF NOT EXISTS pics (
-                 id INTEGER PRIMARY KEY, 
                  filename TEXT, 
                  counter INTEGER DEFAULT 0,
-                 folder TEXT
+                 folder TEXT,
+                 stat TEXT,
+                 PRIMARY KEY (filename, folder)
               )
               """)
     D.execute("""CREATE TABLE IF NOT EXISTS folders (
@@ -133,7 +197,7 @@ def initialize():
                  name TEXT
               )
               """)
-
+    register_photos()
 
 if __name__ == '__main__':
 
@@ -149,7 +213,15 @@ if __name__ == '__main__':
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
+    pic_conv_handler=ConversationHandler(
+        entry_points=[CommandHandler("npic", new_picture)],
+        states={
+            SELECT_PHOTO: [MessageHandler(filters.PHOTO, handle_picture)]
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+    )
     app.add_handler(folder_conv_handler)
+    app.add_handler(pic_conv_handler)
 
     setup_commands(app)    
     app.run_polling()
