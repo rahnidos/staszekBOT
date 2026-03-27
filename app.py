@@ -111,6 +111,25 @@ async def handle_picture(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.reply_text(f"dodane")
     return ConversationHandler.END
 
+async def roll_picture(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    pic_user=D.select_single("SELECT count(filename) from pics where folder=?",(user_id,))
+    pic_chat=D.select_single("SELECT count(filename) from pics where folder=?",(chat_id,))
+    if pic_user and pic_user>0:
+        pic=D.select_random_pic(user_id)
+    elif pic_chat and pic_chat>0:    
+        pic=D.select_random_pic(chat_id)
+    else: 
+        await update.message.reply_text(f"to nie jest miejsce na takie rozmowy")
+        return
+    print(pic)
+    pic_path = os.path.join(STASZEKHOME, "pics", pic[2],pic[0])
+    print(pic_path)
+    with open(pic_path, "rb") as f:
+        await update.message.reply_photo(photo=f)
+async def return_ids(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(f"id chatu to {update.effective_chat.id} a id usera to {update.effective_user.id}")
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Anulowano.")
@@ -133,6 +152,17 @@ COMMANDS = [
         "handler": dice_cmd,
         "only_admin": False,
     },
+    {
+        "name": "picture",
+        "handler": roll_picture,
+        "only_admin": False,
+    },
+    {
+        "name": "id",
+        "handler": return_ids,
+        "only_admin": True,
+    }
+
 ]
 
 async def admin_cmd(update, context, handler):

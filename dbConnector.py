@@ -41,7 +41,7 @@ class dbConnector(object):
             return False
         cur.execute(q)
         r = cur.fetchall()
-        return r[0] if r else False
+        return r if r else False
     
     def select_random(self, table):
         cur = self.__conn.cursor()
@@ -54,10 +54,13 @@ class dbConnector(object):
     
     def select_random_pic(self, folder):
         cur = self.__conn.cursor()
-        cur.execute("elect p.filename, p.folder, f.name from pics p join folders f on p.folder=f.id where p.folder=? and p.stat='o' order by random() limit 1",(folder))
+        cur.execute("Select p.filename, p.folder, f.name "
+                    "FROM pics p join folders f "
+                    "on p.folder=f.id "
+                    "where p.folder=? and p.stat='o' order by random() limit 1",(folder,))
         r = cur.fetchone()
         cur.close()
-        return r[0] if r else False
+        return r if r else False
     
     def execute(self, q, params=None):
         #@# TODO: błędy wyrzucić do loggera
