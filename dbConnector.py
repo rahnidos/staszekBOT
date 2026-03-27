@@ -54,11 +54,20 @@ class dbConnector(object):
     
     def select_random_pic(self, folder):
         cur = self.__conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM pics WHERE folder=? AND stat='o'", (folder,))
+        count = cur.fetchone()[0]
+        if count == 0:
+            cur.execute("UPDATE pics SET stat='o' WHERE folder=?", (folder,))
+            self.__conn.commit()
         cur.execute("Select p.filename, p.folder, f.name "
                     "FROM pics p join folders f "
                     "on p.folder=f.id "
                     "where p.folder=? and p.stat='o' order by random() limit 1",(folder,))
         r = cur.fetchone()
+        if r:
+            filename = r[0]
+            cur.execute("UPDATE pics SET stat='s' WHERE folder=? AND filename=?", (folder, filename))
+            self.__conn.commit()
         cur.close()
         return r if r else False
     

@@ -128,6 +128,7 @@ async def roll_picture(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     print(pic_path)
     with open(pic_path, "rb") as f:
         await update.message.reply_photo(photo=f)
+        
 async def return_ids(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f"id chatu to {update.effective_chat.id} a id usera to {update.effective_user.id}")
 
